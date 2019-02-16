@@ -35,16 +35,23 @@ namespace CommonServer
 
         public static string GetTokenId(string token)
         {
-            var tokenHandler = new JwtSecurityTokenHandler();
-            var stoken = tokenHandler.ReadJwtToken(token);
-
-            var now = DateTime.UtcNow;
-            if (now >= stoken.ValidFrom && now <= stoken.ValidTo)
+            try
             {
-                return stoken.Claims.First(x => x.Type == "unique_name").Value;
-            }
+                var tokenHandler = new JwtSecurityTokenHandler();
+                var stoken = tokenHandler.ReadJwtToken(token);
 
-            return string.Empty;
+                var now = DateTime.UtcNow;
+                if (now >= stoken.ValidFrom && now <= stoken.ValidTo)
+                {
+                    return stoken.Claims.First(x => x.Type == "unique_name").Value;
+                }
+
+                return string.Empty;
+            }
+            catch (Exception)
+            {
+                return string.Empty;
+            }
         }
     }
 }

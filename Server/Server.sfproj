@@ -32,7 +32,9 @@
     <Content Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\ChatActorService\ChatActorService.csproj" />
     <ProjectReference Include="..\LoginServer\LoginServer.csproj" />
+    <ProjectReference Include="..\UdpChatService\UdpChatService.csproj" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.Common.targets" />
   <PropertyGroup>
