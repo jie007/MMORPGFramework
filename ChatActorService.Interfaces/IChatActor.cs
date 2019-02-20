@@ -17,8 +17,8 @@ namespace ChatActorService.Interfaces
     public interface IChatActor : IActor
     {
         Task SetOnlineState(bool isOnline);
-        Task WriteMessage(string msg);
+        Task WriteMessage(ActorChatMessage msg);
 
-        Task<List<string>> GetMessages();
+        Task<List<ActorChatMessage>> GetMessages();
     }
 }

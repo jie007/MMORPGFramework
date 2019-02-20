@@ -29,7 +29,7 @@ namespace ChatActorService
         protected override async Task OnActivateAsync()
         {
             await this.StateManager.TryAddStateAsync(StateNameIsOnline, false);
-            await this.StateManager.TryAddStateAsync(StateNameMessages, new List<string>());
+            await this.StateManager.TryAddStateAsync(StateNameMessages, new List<ActorChatMessage>());
             await base.OnActivateAsync();
         }
 
@@ -50,23 +50,23 @@ namespace ChatActorService
             await this.StateManager.SaveStateAsync();
         }
 
-        public async Task WriteMessage(string msg)
+        public async Task WriteMessage(ActorChatMessage msg)
         {
             if (!await this.StateManager.GetStateAsync<bool>(StateNameIsOnline))
             {
                 return;
             }
 
-            var messages = await this.StateManager.GetStateAsync<List<string>>(StateNameMessages);
+            var messages = await this.StateManager.GetStateAsync<List<ActorChatMessage>>(StateNameMessages);
             messages.Add(msg);
 
             await this.StateManager.SetStateAsync(StateNameMessages, messages);
             await this.StateManager.SaveStateAsync();
         }
 
-        public async Task<List<string>> GetMessages()
+        public async Task<List<ActorChatMessage>> GetMessages()
         {
-            var messages = await this.StateManager.GetStateAsync<List<string>>(StateNameMessages);
+            var messages = await this.StateManager.GetStateAsync<List<ActorChatMessage>>(StateNameMessages);
             await ClearMessages();
             await this.StateManager.SaveStateAsync();
             return messages;
@@ -74,7 +74,7 @@ namespace ChatActorService
 
         private async Task ClearMessages()
         {
-            await this.StateManager.SetStateAsync(StateNameMessages, new List<string>());
+            await this.StateManager.SetStateAsync(StateNameMessages, new List<ActorChatMessage>());
         }
     }
 }

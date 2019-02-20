@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Common.Protocols.Chat;
 using ReliableUdp;
 using ReliableUdp.Enums;
 using ReliableUdp.Utility;
@@ -41,15 +42,25 @@ namespace TestChatClient
                 });
             thread.Start();
 
-            var tokenWriter = new UdpDataWriter();
-            tokenWriter.Put(token);
-            manager.SendToAll(tokenWriter, ChannelType.ReliableOrdered);
+            SendToken(token, manager);
 
             while (connected)
             {
-                string message = Console.ReadLine();
+                var msg = new ChatMessage();
+                Console.WriteLine("Who to send a Message (empty for Map)?");
+                msg.FromOrTo = Console.ReadLine();
+                
+                msg.Scope = ChatScope.Whisper;
+                if (string.IsNullOrEmpty(msg.FromOrTo))
+                {
+                    msg.Scope = ChatScope.Map;
+                }
+
+                Console.WriteLine("Message?");
+                msg.Message = Console.ReadLine();
+
                 var writer = new UdpDataWriter();
-                writer.Put(message);
+                msg.Write(writer);
                 manager.SendToAll(writer, ChannelType.ReliableOrdered);
             }
 
@@ -58,6 +69,17 @@ namespace TestChatClient
 
             Console.WriteLine("Stopped Execution.");
 
+        }
+
+        private static void SendToken(string token, UdpManager manager)
+        {
+            var tokenMsg = new TokenMessage()
+            {
+                Token = token
+            };
+            var tokenWriter = new UdpDataWriter();
+            tokenMsg.Write(tokenWriter);
+            manager.SendToAll(tokenWriter, ChannelType.ReliableOrdered);
         }
     }
 }

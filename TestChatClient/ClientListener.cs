@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Common.Protocols.Chat;
 using ReliableUdp;
 using ReliableUdp.Enums;
 using ReliableUdp.Utility;
@@ -41,7 +42,17 @@ namespace TestChatClient
 
         public void OnNetworkReceive(UdpPeer peer, UdpDataReader reader, ChannelType channel)
         {
-            Console.WriteLine(reader.GetString());
+            if (reader.PeekByte() == (byte) ChatUdpProtocolMessageTypes.Token)
+            {
+                Console.WriteLine("Token got approved!");
+                return;
+            }
+
+            while (!reader.EndOfData)
+            {
+                var msg = new ChatMessage(reader);
+                Console.WriteLine("{0} ({1}): {2}", msg.FromOrTo, msg.Scope, msg.Message);
+            }
         }
 
         public void OnNetworkReceiveAck(UdpPeer peer, UdpDataReader reader, ChannelType channel)

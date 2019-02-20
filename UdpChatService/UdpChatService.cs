@@ -49,7 +49,7 @@ namespace UdpChatService
             {
                 this.listener.Update();
 
-                Task.Delay(50);
+                Task.Delay(50).Wait();
             }
 
             return base.RunAsync(cancellationToken);
