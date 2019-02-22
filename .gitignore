@@ -38,3 +38,6 @@ sysinfo.txt
 # Builds
 *.apk
 *.unitypackage
+/UnityClient/Assets/CopyrightStuff.meta
+/UnityClient/Assets/TextMesh Pro.meta
+/UnityClient/Assets/TextMesh Pro
