@@ -45,6 +45,7 @@ namespace Assets.Scripts
             }
             else
             {
+                Context.Charname = CharSelection.options[CharSelection.value].text;
                 SceneManager.LoadScene("MapScene");
             }
         }

@@ -1,7 +1,7 @@
 ﻿using System;
 using ReliableUdp.Utility;
 
-namespace Common.Protocols.Chat
+namespace Common.Protocols
 {
     public class TokenMessage
     {
@@ -14,7 +14,7 @@ namespace Common.Protocols.Chat
 
         public TokenMessage(UdpDataReader reader)
         {
-            if (reader.PeekByte() != (byte)ChatUdpProtocolMessageTypes.Token)
+            if (reader.PeekByte() != (byte)MessageTypes.Token)
             {
                 throw new NotSupportedException();
             }
@@ -26,7 +26,7 @@ namespace Common.Protocols.Chat
 
         public void Write(UdpDataWriter writer)
         {
-            writer.Put((byte)ChatUdpProtocolMessageTypes.Token);
+            writer.Put((byte)MessageTypes.Token);
             writer.Put(Token);
         }
     }

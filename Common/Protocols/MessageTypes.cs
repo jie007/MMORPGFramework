@@ -3,11 +3,12 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Common.Protocols.Chat
+namespace Common.Protocols
 {
-    public enum ChatUdpProtocolMessageTypes : byte
+    public enum MessageTypes : byte
     {
         Token = 0,
-        Chat = 1
+        Chat = 1,
+        Position = 2
     }
 }

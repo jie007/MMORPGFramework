@@ -18,7 +18,7 @@ namespace Common.Protocols.Chat
 
         public ChatMessage(UdpDataReader reader)
         {
-            if (reader.PeekByte() != (byte)ChatUdpProtocolMessageTypes.Chat)
+            if (reader.PeekByte() != (byte)MessageTypes.Chat)
             {
                 throw new NotSupportedException();
             }
@@ -32,7 +32,7 @@ namespace Common.Protocols.Chat
 
         public void Write(UdpDataWriter writer)
         {
-            writer.Put((byte)ChatUdpProtocolMessageTypes.Chat);
+            writer.Put((byte)MessageTypes.Chat);
             writer.Put((byte)Scope);
             writer.Put(FromOrTo);
             writer.Put(Message);

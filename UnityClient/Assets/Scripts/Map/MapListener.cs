@@ -5,54 +5,61 @@ using System.Text;
 using System.Threading.Tasks;
 using Common.Protocols;
 using Common.Protocols.Chat;
+using Common.Protocols.Map;
 using ReliableUdp;
 using ReliableUdp.Enums;
 using ReliableUdp.Utility;
+using UnityEngine;
 
-namespace TestChatClient
+namespace Assets.Scripts.Map
 {
-    public class ClientListener : IUdpEventListener
+    public class MapListener : IUdpEventListener
     {
         private readonly Action<bool> connEvent;
+        private readonly Action tokenApproved;
+        private readonly Action<PositionMessage> recvPositionMessage;
 
-
-        public ClientListener(Action<bool> connEvent)
+        public MapListener(Action<bool> connEvent, Action tokenApproved, Action<PositionMessage> recvPositionMessage)
         {
             this.connEvent = connEvent;
+            this.tokenApproved = tokenApproved;
+            this.recvPositionMessage = recvPositionMessage;
         }
 
         public UdpManager UdpManager { get; set; }
 
         public void OnPeerConnected(UdpPeer peer)
         {
-            Console.WriteLine("Connected. (" + UdpManager.GetFirstPeer().ConnectId + ")");
+            Debug.Log("Connected. (" + UdpManager.GetFirstPeer().ConnectId + ")");
             connEvent(true);
         }
 
         public void OnPeerDisconnected(UdpPeer peer, DisconnectInfo disconnectInfo)
         {
-            Console.WriteLine("Disconnected");
+            Debug.Log("Disconnected");
             connEvent(false);
         }
 
         public void OnNetworkError(UdpEndPoint endPoint, int socketErrorCode)
         {
-            Console.WriteLine("[Client] error: " + socketErrorCode);
+            Debug.Log("[Client] error: " + socketErrorCode);
             connEvent(false);
         }
 
         public void OnNetworkReceive(UdpPeer peer, UdpDataReader reader, ChannelType channel)
         {
-            if (reader.PeekByte() == (byte) MessageTypes.Token)
+            if (reader.PeekByte() == (byte)MessageTypes.Token)
             {
-                Console.WriteLine("Token got approved!");
+                tokenApproved();
+                Debug.Log("Map Token got approved!");
                 return;
             }
 
             while (!reader.EndOfData)
             {
-                var msg = new ChatMessage(reader);
-                Console.WriteLine("{0} ({1}): {2}", msg.FromOrTo, msg.Scope, msg.Message);
+                var msg = new PositionMessage(reader);
+                recvPositionMessage(msg);
+                Debug.Log(string.Format("{0}: {1}, {2}", msg.Name, msg.X, msg.Z));
             }
         }
 

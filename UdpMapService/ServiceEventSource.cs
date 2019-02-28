@@ -7,10 +7,10 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.ServiceFabric.Services.Runtime;
 
-namespace UdpChatService
+namespace UdpMapService
 {
-    [EventSource(Name = "MyCompany-Server-UdpChatService")]
-    public sealed class ServiceEventSource : EventSource
+    [EventSource(Name = "MyCompany-Server-UdpMapService")]
+    internal sealed class ServiceEventSource : EventSource
     {
         public static readonly ServiceEventSource Current = new ServiceEventSource();
 
@@ -65,11 +65,11 @@ namespace UdpChatService
         }
 
         [NonEvent]
-        public void ServiceMessage(StatelessServiceContext serviceContext, string message)
+        public void ServiceMessage(StatelessServiceContext serviceContext, string message, params object[] args)
         {
             if (this.IsEnabled())
             {
-                string finalMessage = message;
+                string finalMessage = string.Format(message, args);
                 ServiceMessage(
                     serviceContext.ServiceName.ToString(),
                     serviceContext.ServiceTypeName,
@@ -81,12 +81,13 @@ namespace UdpChatService
                     finalMessage);
             }
         }
+
         [NonEvent]
-        public void ServiceMessage(StatelessServiceContext serviceContext, string message, params object[] args)
+        public void ServiceMessage(StatelessServiceContext serviceContext, string message)
         {
             if (this.IsEnabled())
             {
-                string finalMessage = string.Format(message, args);
+                string finalMessage = message;
                 ServiceMessage(
                     serviceContext.ServiceName.ToString(),
                     serviceContext.ServiceTypeName,

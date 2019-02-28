@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Assets.Api;
+using Common.Protocols;
 using Common.Protocols.Chat;
 using ReliableUdp;
 using ReliableUdp.Enums;
@@ -29,6 +30,7 @@ namespace Assets.Scripts.Chat
             bool connecting = true;
             manager = new UdpManager(new ChatListener((con) =>
             {
+                SendToken(token);
                 connected = con;
                 Debug.Log("Chat Client Connected");
                 connecting = false;
@@ -39,8 +41,6 @@ namespace Assets.Scripts.Chat
 
             manager.Connect("localhost", 9191);
             Debug.Log("Chat Client Connecting...");
-
-            SendToken(token);
         }
 
         private void SendChatMessage(ChatMessage msg)

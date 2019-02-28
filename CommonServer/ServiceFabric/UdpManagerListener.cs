@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics.Tracing;
 using System.Fabric;
 using System.Globalization;
 using System.Threading;
@@ -7,13 +8,12 @@ using System.Threading.Tasks;
 using Microsoft.ServiceFabric.Services.Communication.Runtime;
 
 using ReliableUdp;
-using UdpChatService;
 
-namespace UdpChatService
+namespace CommonServer.ServiceFabric
 {
     public class UdpManagerListener : ICommunicationListener
     {
-        private readonly ServiceEventSource eventSource;
+        private readonly Action<StatelessServiceContext, string> serviceMessage;
         private readonly StatelessServiceContext serviceContext;
         private readonly string endpointName;
 
@@ -21,9 +21,9 @@ namespace UdpChatService
         private string publishAddress;
         private string listeningAddress;
 
-        private UdpListener udpListener;
+        private IUdpListener udpListener;
 
-        public UdpManagerListener(StatelessServiceContext serviceContext, ServiceEventSource eventSource, string endpointName)
+        public UdpManagerListener(StatelessServiceContext serviceContext, Action<StatelessServiceContext, string> serviceMessage, string endpointName, IUdpListener udpListener)
         {
             if (serviceContext == null)
             {
@@ -35,21 +35,27 @@ namespace UdpChatService
                 throw new ArgumentNullException(nameof(endpointName));
             }
 
-            if (eventSource == null)
+            if (serviceMessage == null)
             {
-                throw new ArgumentNullException(nameof(eventSource));
+                throw new ArgumentNullException(nameof(serviceMessage));
+            }
+
+            if (udpListener == null)
+            {
+                throw new ArgumentNullException(nameof(udpListener));
             }
 
             this.serviceContext = serviceContext;
             this.endpointName = endpointName;
-            this.eventSource = eventSource;
+            this.serviceMessage = serviceMessage;
+            this.udpListener = udpListener;
         }
 
         public bool ListenOnSecondary { get; set; }
 
         public void Update()
         {
-            if (this.udpListener != null)
+            if (this.udpListener != null && this.udp != null)
                 this.udpListener.Update();
         }
 
@@ -68,14 +74,13 @@ namespace UdpChatService
 
             try
             {
-                this.eventSource.ServiceMessage(this.serviceContext, "Starting server on " + this.listeningAddress);
+                this.serviceMessage(this.serviceContext, "Starting server on " + this.listeningAddress);
 
-                this.udpListener = new UdpListener();
                 this.udp = new UdpManager(this.udpListener, "kds", int.MaxValue, 100);
 
                 if (this.udp.Start(port))
                 {
-                    this.eventSource.ServiceMessage(this.serviceContext, "Listening on " + this.publishAddress);
+                    this.serviceMessage(this.serviceContext, "Listening on " + this.publishAddress);
                 }
                 else
                 {
@@ -85,7 +90,7 @@ namespace UdpChatService
             }
             catch (Exception ex)
             {
-                this.eventSource.ServiceMessage(this.serviceContext, "Udp server failed to open. " + ex.ToString());
+                this.serviceMessage(this.serviceContext, "Udp server failed to open. " + ex.ToString());
 
                 this.StopUdpServer();
 
@@ -95,7 +100,7 @@ namespace UdpChatService
 
         public Task CloseAsync(CancellationToken cancellationToken)
         {
-            this.eventSource.ServiceMessage(this.serviceContext, "Closing udp server");
+            this.serviceMessage(this.serviceContext, "Closing udp server");
 
             this.StopUdpServer();
 
@@ -104,7 +109,7 @@ namespace UdpChatService
 
         public void Abort()
         {
-            this.eventSource.ServiceMessage(this.serviceContext, "Aborting udp server");
+            this.serviceMessage(this.serviceContext, "Aborting udp server");
 
             this.StopUdpServer();
         }

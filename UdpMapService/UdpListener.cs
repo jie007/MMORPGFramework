@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using ChatActorService.Interfaces;
 using Common.Protocols;
 using Common.Protocols.Chat;
+using Common.Protocols.Map;
 using CommonServer;
 using CommonServer.ServiceFabric;
 using Microsoft.ServiceFabric.Actors;
@@ -18,18 +19,31 @@ using ReliableUdp;
 using ReliableUdp.Enums;
 using ReliableUdp.Utility;
 
-namespace UdpChatService
+namespace UdpMapService
 {
     public class UdpListener : IUdpListener
     {
         public UdpManager UdpManager { get; set; }
 
         public ConcurrentDictionary<long, string> ConnectionIdToUserId = new ConcurrentDictionary<long, string>();
+        public ConcurrentDictionary<string, PositionMessage> LastPositions = new ConcurrentDictionary<string, PositionMessage>();
 
         public void Update()
         {
             UdpManager.PollEvents();
             var peers = UdpManager.GetPeers();
+
+            UdpDataWriter writer = new UdpDataWriter();
+            foreach (var position in LastPositions)
+            {
+                var positionMsg = new PositionMessage()
+                {
+                    Name = position.Key,
+                    X = position.Value.X,
+                    Z = position.Value.Z
+                };
+                positionMsg.Write(writer);
+            }
 
             foreach (UdpPeer peer in peers)
             {
@@ -37,29 +51,7 @@ namespace UdpChatService
                 if (!this.ConnectionIdToUserId.ContainsKey(closurePeer.ConnectId))
                     continue;
 
-                string id = this.ConnectionIdToUserId[closurePeer.ConnectId];
-                IChatActor chatActor = ActorProxy.Create<IChatActor>(new ActorId(id));
-                chatActor.GetMessages().ContinueWith((taskMessages) =>
-                {
-                    var msgs = taskMessages.Result;
-                    if (msgs.Count == 0)
-                        return;
-
-                    UdpDataWriter writer = new UdpDataWriter();
-                    foreach (var msg in msgs)
-                    {
-                        var chatMsg = new ChatMessage()
-                        {
-                            Scope = msg.Scope,
-                            FromOrTo = msg.Prefix,
-                            Message = msg.Message
-                        };
-                        chatMsg.Write(writer);
-                    }
-
-                    closurePeer.Send(writer, ChannelType.ReliableOrdered);
-                });
-
+                closurePeer.Send(writer, ChannelType.ReliableOrdered);
             }
         }
 
@@ -71,9 +63,6 @@ namespace UdpChatService
         {
             if (ConnectionIdToUserId.ContainsKey(peer.ConnectId))
             {
-                var actor = ActorProxy.Create<IChatActor>(new ActorId(ConnectionIdToUserId[peer.ConnectId]));
-                actor.SetOnlineState(false);
-
                 string value = string.Empty;
                 ConnectionIdToUserId.TryRemove(peer.ConnectId, out value);
             }
@@ -89,26 +78,12 @@ namespace UdpChatService
             {
                 if (ConnectionIdToUserId.ContainsKey(peer.ConnectId))
                 {
-                    var msg = new ChatMessage(reader);
+                    var msg = new PositionMessage(reader);
 
-                    if (msg.Scope == ChatScope.Whisper)
-                    {
-                        var from = ConnectionIdToUserId[peer.ConnectId];
-                        string to = msg.FromOrTo;
-                        msg.FromOrTo = from;
-                        var fullMessage = string.Format("{0}: {1}", from, msg.Message);
-                        var actor = ActorProxy.Create<IChatActor>(new ActorId(to));
-                        actor.WriteMessage(new ActorChatMessage()
-                        {
-                            Message = msg.Message,
-                            Prefix = from,
-                            Scope = msg.Scope
-                        }).Wait();
+                    string name = ConnectionIdToUserId[peer.ConnectId];
+                    msg.Name = name;
 
-                        UdpDataWriter writer = new UdpDataWriter();
-                        msg.Write(writer);
-                        peer.Send(writer, ChannelType.ReliableOrdered);
-                    }
+                    LastPositions.AddOrUpdate(name, msg, (key, oldValue) => msg);
                 }
                 else
                 {
