@@ -8,6 +8,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Common.RestApi;
 using CommonServer;
+using CommonServer.DocDb;
 using CommonServer.Documents;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -21,19 +22,18 @@ namespace LoginServer.Controllers
     [AllowAnonymous]
     public class LoginController : ControllerBase
     {
+        private UserInformationRepository repo = new UserInformationRepository();
         private static Regex emailRegex = new Regex("^[a-zA-Z0-9.!#$%&’*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\\.[a-zA-Z0-9-]+)*$");
 
         [Route("token")]
         [HttpPost]
         public async Task<ActionResult<string>> GetToken([FromBody] LoginInformation loginInformation)
         {
-            var docDb = DocumentClientSinglton.Instance;
-
             try
             {
-                var document = await docDb.ReadDocumentAsync<UserInformation>(UriFactory.CreateDocumentUri(DocumentDbConfiguration.DocumentDb, DocumentDbConfiguration.DocumentDbLoginDbCollection, loginInformation.Email));
+                var document = await repo.Get(loginInformation.Email);
 
-                if (!PasswordHash.CheckPassword(document.Document.PasswordHash, loginInformation.Password))
+                if (!PasswordHash.CheckPassword(document.PasswordHash, loginInformation.Password))
                 {
                     return string.Empty;
                 }
@@ -73,19 +73,13 @@ namespace LoginServer.Controllers
                 return RegisterResult.IncorrectEmail;
             }
 
-            var docDb = DocumentClientSinglton.Instance;
-
-            try
+            var userInfo = new UserInformation()
             {
-                var userInfo = new UserInformation()
-                {
-                    Id = loginInformation.Email,
-                    PasswordHash = PasswordHash.GetPasswordHash(loginInformation.Password)
-                };
+                Id = loginInformation.Email,
+                PasswordHash = PasswordHash.GetPasswordHash(loginInformation.Password)
+            };
 
-                await docDb.CreateDocumentAsync(DocumentDbConfiguration.LoginCollectionUri, userInfo);
-            }
-            catch (DocumentClientException de)
+            if (!await repo.Create(userInfo))
             {
                 return RegisterResult.AlreadyRegistered;
             }

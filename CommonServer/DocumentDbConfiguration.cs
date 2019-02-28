@@ -14,8 +14,5 @@ namespace CommonServer
         public static readonly string DocumentDb = "LoginDb";
         public static readonly string DocumentDbLoginDbCollection = "LoginCollection";
         public static readonly string DocumentDbCharacterDbCollection = "CharacterCollection";
-
-        public static readonly Uri LoginCollectionUri = UriFactory.CreateDocumentCollectionUri(DocumentDbConfiguration.DocumentDb, DocumentDbConfiguration.DocumentDbLoginDbCollection);
-        public static readonly Uri CharacterCollectionUri = UriFactory.CreateDocumentCollectionUri(DocumentDbConfiguration.DocumentDb, DocumentDbConfiguration.DocumentDbCharacterDbCollection);
     }
 }

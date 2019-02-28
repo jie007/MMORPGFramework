@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Common;
 using Common.RestApi;
 using CommonServer;
+using CommonServer.DocDb;
 using CommonServer.Documents;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -23,6 +24,8 @@ namespace LoginServer.Controllers
     [Authorize]
     public class CharacterController : ControllerBase
     {
+        private CharacterInformationRepository repo = new CharacterInformationRepository();
+
         [Route("SelectCharacter")]
         [HttpGet]
         public async Task<ActionResult<string>> SelectCharacter(string name)
@@ -43,7 +46,7 @@ namespace LoginServer.Controllers
         [HttpGet]
         public ActionResult<List<CharacterInformation>> GetCharacters()
         {
-            return GetCharacters(GetEmailClaim());
+            return repo.GetCharacters(GetEmailClaim());
         }
 
         private string GetEmailClaim()
@@ -58,10 +61,10 @@ namespace LoginServer.Controllers
         {
             string email = GetEmailClaim();
 
-            if (await ExistsCharacter(name))
+            if (await repo.Exists(name))
                 return null;
 
-            if (GetCharacters(email).Count > GameDesign.MaximumNumberOfCharacters)
+            if (repo.GetCharacters(email).Count > GameDesign.MaximumNumberOfCharacters)
                 return null;
 
             var newChar = new CharacterInformation()
@@ -71,41 +74,12 @@ namespace LoginServer.Controllers
                 Map = "StartMap"
             };
 
-            await DocumentClientSinglton.Instance.CreateDocumentAsync(DocumentDbConfiguration.CharacterCollectionUri, newChar);
+            if (!await repo.Create(newChar))
+            {
+                return null;
+            }
 
             return newChar;
-        }
-
-        private static List<CharacterInformation> GetCharacters(string email)
-        {
-            var docDb = DocumentClientSinglton.Instance;
-            var q = from c in docDb.CreateDocumentQuery<CharacterInformation>(DocumentDbConfiguration.CharacterCollectionUri)
-                    where c.OwnerEmail == email
-                    select c;
-
-            return q.ToList();
-        }
-
-        private static async Task<bool> ExistsCharacter(string name)
-        {
-            var docDb = DocumentClientSinglton.Instance;
-            try
-            {
-                var document = await docDb.ReadDocumentAsync<CharacterInformation>(
-                    UriFactory.CreateDocumentUri(DocumentDbConfiguration.DocumentDb,
-                        DocumentDbConfiguration.DocumentDbCharacterDbCollection, name));
-
-                return true;
-            }
-            catch (DocumentClientException de)
-            {
-                if (de.StatusCode != HttpStatusCode.NotFound)
-                {
-                    return true;
-                }
-            }
-
-            return false;
         }
     }
 }

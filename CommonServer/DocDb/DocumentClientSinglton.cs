@@ -7,7 +7,7 @@ using CommonServer;
 using Microsoft.Azure.Documents;
 using Microsoft.Azure.Documents.Client;
 
-namespace LoginServer
+namespace CommonServer.DocDb
 {
     public static class DocumentClientSinglton
     {
