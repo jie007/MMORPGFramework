@@ -46,7 +46,10 @@ namespace LoginServer.Controllers
                 }
             }
 
-            return JwtTokenHelper.GenerateToken(ClaimTypes.Email, loginInformation.Email);
+            return JwtTokenHelper.GenerateToken(new List<Claim>
+            {
+                new Claim(ClaimTypes.Email, loginInformation.Email)
+            });
         }
 
         [Route("register")]

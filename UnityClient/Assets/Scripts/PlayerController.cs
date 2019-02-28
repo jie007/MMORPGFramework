@@ -28,7 +28,7 @@ namespace Assets.Scripts
 
             Vector3 direction = new Vector3(Camera.transform.forward.x, 0, Camera.transform.forward.z).normalized;
             this.transform.LookAt(this.transform.position + direction);
-            this.transform.position += direction * CurrentSpeed * MaximumCharacterSpeed;
+            this.transform.position += direction * CurrentSpeed * MaximumCharacterSpeed * Time.deltaTime;
 
             Animator.SetFloat("Speed", CurrentSpeed);
         }

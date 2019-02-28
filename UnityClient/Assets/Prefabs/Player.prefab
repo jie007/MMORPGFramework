@@ -1081,7 +1081,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   Animator: {fileID: 8705269962465813075}
-  MaximumCharacterSpeed: 0.05
+  MaximumCharacterSpeed: 5
+  CurrentSpeed: 0
   Camera: {fileID: 0}
 --- !u!1 &3460792380065733545
 GameObject:

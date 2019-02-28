@@ -8,10 +8,16 @@
     <Parameter Name="ChatActorService_PartitionCount" DefaultValue="10" />
     <Parameter Name="ChatActorService_MinReplicaSetSize" DefaultValue="3" />
     <Parameter Name="ChatActorService_TargetReplicaSetSize" DefaultValue="3" />
+    <Parameter Name="MapActorServiceActorService_PartitionCount" DefaultValue="10" />
+    <Parameter Name="MapActorServiceActorService_MinReplicaSetSize" DefaultValue="1" />
+    <Parameter Name="MapActorServiceActorService_TargetReplicaSetSize" DefaultValue="1" />
   </Parameters>
   <!-- Import the ServiceManifest from the ServicePackage. The ServiceManifestName and ServiceManifestVersion 
        should match the Name and Version attributes of the ServiceManifest element defined in the 
        ServiceManifest.xml file. -->
+  <ServiceManifestImport>
+    <ServiceManifestRef ServiceManifestName="MapActorServicePkg" ServiceManifestVersion="1.0.0" />
+  </ServiceManifestImport>
   <ServiceManifestImport>
     <ServiceManifestRef ServiceManifestName="UdpMapServicePkg" ServiceManifestVersion="1.0.0" />
     <ConfigOverrides />
@@ -54,6 +60,11 @@
     <Service Name="ChatActorService" GeneratedIdRef="a6b3bbf1-67d9-46f5-9108-320c2e3dc4d2|Volatile">
       <StatefulService ServiceTypeName="ChatActorServiceType" TargetReplicaSetSize="[ChatActorService_TargetReplicaSetSize]" MinReplicaSetSize="[ChatActorService_MinReplicaSetSize]">
         <UniformInt64Partition PartitionCount="[ChatActorService_PartitionCount]" LowKey="-9223372036854775808" HighKey="9223372036854775807" />
+      </StatefulService>
+    </Service>
+    <Service Name="MapActorServiceActorService" GeneratedIdRef="dd34fc28-833a-4ac3-b860-2b617734cb0e|None">
+      <StatefulService ServiceTypeName="MapActorServiceActorServiceType" TargetReplicaSetSize="[MapActorServiceActorService_TargetReplicaSetSize]" MinReplicaSetSize="[MapActorServiceActorService_MinReplicaSetSize]">
+        <UniformInt64Partition PartitionCount="[MapActorServiceActorService_PartitionCount]" LowKey="-9223372036854775808" HighKey="9223372036854775807" />
       </StatefulService>
     </Service>
   </DefaultServices>

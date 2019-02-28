@@ -14,17 +14,15 @@ namespace CommonServer
         // TODO: Add Certificate to JWT Token
         public static readonly string SymmetricKey = "HelloWorld!HelloWorld!HelloWorld!HelloWorld!";
 
-        public static string GenerateToken(string claimType, string id, int expireHours = 48)
+        public static string GenerateToken(List<Claim> claims, int expireHours = 48)
         {
             var tokenHandler = new JwtSecurityTokenHandler();
 
             var now = DateTime.UtcNow;
+
             var tokenDescriptor = new SecurityTokenDescriptor
             {
-                Subject = new ClaimsIdentity(new[]
-                {
-                    new Claim(claimType, id)
-                }),
+                Subject = new ClaimsIdentity(claims),
                 Expires = now.AddHours(expireHours),
                 SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(UTF7Encoding.UTF7.GetBytes(SymmetricKey)), SecurityAlgorithms.HmacSha256Signature)
             };
@@ -33,7 +31,7 @@ namespace CommonServer
             return tokenHandler.WriteToken(stoken);
         }
 
-        public static string GetTokenId(string token, string claimType)
+        public static string GetTokenClaim(string token, string claimType)
         {
             try
             {

@@ -39,7 +39,11 @@ namespace LoginServer.Controllers
                 return string.Empty;
             }
 
-            return JwtTokenHelper.GenerateToken("CharacterName", name);
+            return JwtTokenHelper.GenerateToken(new List<Claim>
+                {
+                    new Claim("CharacterName", name),
+                    new Claim("Map", c.Document.Map)
+                });
         }
 
         [Route("GetCharacters")]

@@ -114,7 +114,7 @@ namespace UdpChatService
                 {
                     var tokenMsg = new TokenMessage(reader);
                     string token = tokenMsg.Token;
-                    string id = JwtTokenHelper.GetTokenId(token, "CharacterName");
+                    string id = JwtTokenHelper.GetTokenClaim(token, "CharacterName");
 
                     if (string.IsNullOrEmpty(id))
                     {
