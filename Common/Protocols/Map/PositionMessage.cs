@@ -11,6 +11,10 @@ namespace Common.Protocols.Map
 
         public float Z { get; set; }
 
+        public float Speed { get; set; }
+
+        public float Rotation { get; set; }
+
         public PositionMessage()
         {
 
@@ -28,6 +32,8 @@ namespace Common.Protocols.Map
             Name = reader.GetString();
             X = reader.GetFloat();
             Z = reader.GetFloat();
+            Rotation = reader.GetFloat();
+            Speed = reader.GetFloat();
         }
 
         public void Write(UdpDataWriter writer)
@@ -36,6 +42,8 @@ namespace Common.Protocols.Map
             writer.Put(Name);
             writer.Put(X);
             writer.Put(Z);
+            writer.Put(Rotation);
+            writer.Put(Speed);
         }
     }
 }

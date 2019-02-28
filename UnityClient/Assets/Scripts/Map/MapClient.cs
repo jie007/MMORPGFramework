@@ -17,12 +17,15 @@ namespace Assets.Scripts.Map
 {
     public class MapClient : MonoBehaviour
     {
-        public Transform PlayerPosition;
+        public PlayerController PlayerController;
         public GameObject OtherPlayerPrefab;
         private UdpManager manager;
         private bool connected = false;
 
         private Dictionary<string, GameObject> players = new Dictionary<string, GameObject>();
+        private Dictionary<string, PositionMessage> playerPositions = new Dictionary<string, PositionMessage>();
+
+        public float LerpSpeed = 0.1f;
 
         public void Awake()
         {
@@ -59,10 +62,11 @@ namespace Assets.Scripts.Map
 
             if (!players.ContainsKey(msg.Name))
             {
+                playerPositions.Add(msg.Name, msg);
                 players.Add(msg.Name, GameObject.Instantiate(OtherPlayerPrefab));
             }
 
-            players[msg.Name].transform.position = new Vector3(msg.X, 0, msg.Z);
+            playerPositions[msg.Name] = msg;
         }
 
         public void Update()
@@ -70,6 +74,15 @@ namespace Assets.Scripts.Map
             if (manager != null)
             {
                 manager.PollEvents();
+            }
+
+            var playerNames = players.Keys.ToList();
+            foreach (var name in playerNames)
+            {
+                var msg = playerPositions[name];
+                players[msg.Name].transform.rotation = Quaternion.Euler(0, msg.Rotation, 0);
+                players[msg.Name].transform.position = Vector3.Lerp(players[msg.Name].transform.position, new Vector3(msg.X, 0, msg.Z), LerpSpeed);
+                players[msg.Name].GetComponent<RemotePlayerAnimation>().CurrentSpeed = Mathf.Lerp(players[msg.Name].GetComponent<RemotePlayerAnimation>().CurrentSpeed, msg.Speed, LerpSpeed);
             }
         }
 
@@ -80,8 +93,10 @@ namespace Assets.Scripts.Map
                 SendPosition(new PositionMessage()
                 {
                     Name = string.Empty,
-                    X = PlayerPosition.transform.position.x,
-                    Z = PlayerPosition.transform.position.z
+                    X = PlayerController.transform.position.x,
+                    Z = PlayerController.transform.position.z,
+                    Speed = PlayerController.CurrentSpeed,
+                    Rotation = PlayerController.transform.rotation.eulerAngles.y
                 });
             }
         }

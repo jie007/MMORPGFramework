@@ -40,7 +40,9 @@ namespace UdpMapService
                 {
                     Name = position.Key,
                     X = position.Value.X,
-                    Z = position.Value.Z
+                    Z = position.Value.Z,
+                    Rotation = position.Value.Rotation,
+                    Speed = position.Value.Speed
                 };
                 positionMsg.Write(writer);
             }

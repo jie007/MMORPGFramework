@@ -9,7 +9,7 @@ namespace Assets.Scripts
         public Animator Animator;
 
         public float MaximumCharacterSpeed = 5.0f;
-        private float currentSpeed = 0.0f;
+        public float CurrentSpeed = 0.0f;
 
         public Transform Camera;
 
@@ -19,18 +19,18 @@ namespace Assets.Scripts
             if (Input.GetKey(KeyCode.W))
             {
                 bool walk = Input.GetKey(KeyCode.LeftShift);
-                currentSpeed = walk ? 0.5f : 1.0f;
+                CurrentSpeed = walk ? 0.5f : 1.0f;
             }
             else
             {
-                currentSpeed = 0;
+                CurrentSpeed = 0;
             }
 
             Vector3 direction = new Vector3(Camera.transform.forward.x, 0, Camera.transform.forward.z).normalized;
             this.transform.LookAt(this.transform.position + direction);
-            this.transform.position += direction * currentSpeed * MaximumCharacterSpeed;
+            this.transform.position += direction * CurrentSpeed * MaximumCharacterSpeed;
 
-            Animator.SetFloat("Speed", currentSpeed);
+            Animator.SetFloat("Speed", CurrentSpeed);
         }
     }
 }
