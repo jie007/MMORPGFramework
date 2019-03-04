@@ -77,6 +77,7 @@ namespace UdpMapService
                         {
                             Name = position.Name,
                             X = position.X,
+                            Y = position.Y,
                             Z = position.Z,
                             Rotation = position.Rotation,
                             Speed = position.Speed

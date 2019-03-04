@@ -33,9 +33,11 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\ChatActorService\ChatActorService.csproj" />
+    <ProjectReference Include="..\InteractableActorService\InteractableActorService.csproj" />
     <ProjectReference Include="..\LoginServer\LoginServer.csproj" />
     <ProjectReference Include="..\MapActorService\MapActorService.csproj" />
     <ProjectReference Include="..\UdpChatService\UdpChatService.csproj" />
+    <ProjectReference Include="..\UdpInteractableService\UdpInteractableService.csproj" />
     <ProjectReference Include="..\UdpMapService\UdpMapService.csproj" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.Common.targets" />

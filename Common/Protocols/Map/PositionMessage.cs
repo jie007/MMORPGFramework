@@ -9,6 +9,8 @@ namespace Common.Protocols.Map
 
         public float X { get; set; }
 
+        public float Y { get; set; }
+
         public float Z { get; set; }
 
         public float Speed { get; set; }
@@ -31,6 +33,7 @@ namespace Common.Protocols.Map
 
             Name = reader.GetString();
             X = reader.GetFloat();
+            Y = reader.GetFloat();
             Z = reader.GetFloat();
             Rotation = reader.GetFloat();
             Speed = reader.GetFloat();
@@ -41,6 +44,7 @@ namespace Common.Protocols.Map
             writer.Put((byte)MessageTypes.Position);
             writer.Put(Name);
             writer.Put(X);
+            writer.Put(Y);
             writer.Put(Z);
             writer.Put(Rotation);
             writer.Put(Speed);

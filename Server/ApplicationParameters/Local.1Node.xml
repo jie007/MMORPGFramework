@@ -1,6 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Application xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" Name="fabric:/Server" xmlns="http://schemas.microsoft.com/2011/01/fabric">
   <Parameters>
+    <Parameter Name="UdpInteractableService_InstanceCount" Value="1" />
     <Parameter Name="UdpMapService_InstanceCount" Value="1" />
     <Parameter Name="UdpChatService_InstanceCount" Value="1" />
     <Parameter Name="LoginServer_ASPNETCORE_ENVIRONMENT" Value="Development" />
@@ -11,5 +12,8 @@
     <Parameter Name="MapActorServiceActorService_PartitionCount" Value="1" />
     <Parameter Name="MapActorServiceActorService_TargetReplicaSetSize" Value="1" />
     <Parameter Name="MapActorServiceActorService_MinReplicaSetSize" Value="1" />
+    <Parameter Name="InteractableActorServiceActorService_PartitionCount" Value="1" />
+    <Parameter Name="InteractableActorServiceActorService_TargetReplicaSetSize" Value="1" />
+    <Parameter Name="InteractableActorServiceActorService_MinReplicaSetSize" Value="1" />
   </Parameters>
 </Application>

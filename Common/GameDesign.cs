@@ -14,5 +14,8 @@ namespace Common
         public static float TimeoutOnMap = 10;
         public static int RegistrationBorder = 1;
         public static int UnregistrationBorder = 2;
+        public static int ServerRememberEventTimeInMs = 10000;
+        public static int TimeTolerance = 300;
+        public static int InteractableRespawnTimerDelay = 100;
     }
 }

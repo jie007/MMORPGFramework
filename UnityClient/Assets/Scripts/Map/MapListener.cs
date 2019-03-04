@@ -59,7 +59,6 @@ namespace Assets.Scripts.Map
             {
                 var msg = new PositionMessage(reader);
                 recvPositionMessage(msg);
-                Debug.Log(string.Format("{0}: {1}, {2}", msg.Name, msg.X, msg.Z));
             }
         }
 
