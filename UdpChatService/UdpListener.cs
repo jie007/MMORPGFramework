@@ -11,6 +11,7 @@ using Common.Protocols;
 using Common.Protocols.Chat;
 using CommonServer;
 using CommonServer.ServiceFabric;
+using MapActorService.Interfaces;
 using Microsoft.ServiceFabric.Actors;
 using Microsoft.ServiceFabric.Actors.Client;
 
@@ -25,6 +26,7 @@ namespace UdpChatService
         public UdpManager UdpManager { get; set; }
 
         public ConcurrentDictionary<long, string> ConnectionIdToUserId = new ConcurrentDictionary<long, string>();
+        public ConcurrentDictionary<string, string> Map = new ConcurrentDictionary<string, string>();
 
         public void Update()
         {
@@ -75,7 +77,11 @@ namespace UdpChatService
                 actor.SetOnlineState(false);
 
                 string value = string.Empty;
+                string name = ConnectionIdToUserId[peer.ConnectId];
                 ConnectionIdToUserId.TryRemove(peer.ConnectId, out value);
+
+                string map = string.Empty;
+                Map.TryRemove(name, out map);
             }
         }
 
@@ -90,24 +96,26 @@ namespace UdpChatService
                 if (ConnectionIdToUserId.ContainsKey(peer.ConnectId))
                 {
                     var msg = new ChatMessage(reader);
+                    var from = ConnectionIdToUserId[peer.ConnectId];
+                    string to = msg.FromOrTo;
+                    msg.FromOrTo = from;
 
-                    if (msg.Scope == ChatScope.Whisper)
+                    switch (msg.Scope)
                     {
-                        var from = ConnectionIdToUserId[peer.ConnectId];
-                        string to = msg.FromOrTo;
-                        msg.FromOrTo = from;
-                        var fullMessage = string.Format("{0}: {1}", from, msg.Message);
-                        var actor = ActorProxy.Create<IChatActor>(new ActorId(to));
-                        actor.WriteMessage(new ActorChatMessage()
-                        {
-                            Message = msg.Message,
-                            Prefix = from,
-                            Scope = msg.Scope
-                        }).Wait();
+                        case ChatScope.Whisper:
+                            var aMsg = new ActorChatMessage()
+                            {
+                                Message = msg.Message,
+                                Prefix = from,
+                                Scope = msg.Scope
+                            };
 
-                        UdpDataWriter writer = new UdpDataWriter();
-                        msg.Write(writer);
-                        peer.Send(writer, ChannelType.ReliableOrdered);
+                            ActorProxy.Create<IChatActor>(new ActorId(from)).WriteMessage(aMsg);
+                            ActorProxy.Create<IChatActor>(new ActorId(to)).WriteMessage(aMsg);
+                            break;
+                        case ChatScope.Map:
+                            ActorProxy.Create<IMapActorService>(new ActorId(Map[from])).SendChatMessage(msg).Wait();
+                            break;
                     }
                 }
                 else
@@ -115,6 +123,7 @@ namespace UdpChatService
                     var tokenMsg = new TokenMessage(reader);
                     string token = tokenMsg.Token;
                     string id = JwtTokenHelper.GetTokenClaim(token, "CharacterName");
+                    string map = JwtTokenHelper.GetTokenClaim(token, "Map");
 
                     if (string.IsNullOrEmpty(id))
                     {
@@ -123,6 +132,7 @@ namespace UdpChatService
                     else
                     {
                         ConnectionIdToUserId.AddOrUpdate(peer.ConnectId, (connId) => { return id; }, (connId, oldVal) => { return id; });
+                        Map.AddOrUpdate(id, (connId) => { return map; }, (connId, oldVal) => { return map; });
                         var actor = ActorProxy.Create<IChatActor>(new ActorId(id));
                         actor.SetOnlineState(true);
 

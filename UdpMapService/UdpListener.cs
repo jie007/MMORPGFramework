@@ -73,20 +73,11 @@ namespace UdpMapService
 
                     if (registration.Partitions.Contains(pPartition))
                     {
-                        var positionMsg = new PositionMessage()
-                        {
-                            Name = position.Name,
-                            X = position.X,
-                            Y = position.Y,
-                            Z = position.Z,
-                            Rotation = position.Rotation,
-                            Speed = position.Speed
-                        };
-                        positionMsg.Write(writer);
+                        position.Write(writer);
                     }
                 }
 
-                closurePeer.Send(writer, ChannelType.ReliableOrdered);
+                closurePeer.Send(writer, ChannelType.UnreliableOrdered);
             }
         }
 

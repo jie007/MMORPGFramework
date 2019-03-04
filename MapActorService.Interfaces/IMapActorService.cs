@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Common.Protocols.Chat;
 using Common.Protocols.Map;
 using CommonServer.MapPartitioning;
 using Microsoft.ServiceFabric.Actors;
@@ -22,5 +23,6 @@ namespace MapActorService.Interfaces
 
         Task<List<PositionMessage>> GetPlayer(List<MapPartition> partitions);
         Task RemovePlayer(string name);
+        Task SendChatMessage(ChatMessage msg);
     }
 }

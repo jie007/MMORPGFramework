@@ -9,10 +9,12 @@ namespace Assets.Scripts
         public Animator Animator;
 
         public float CurrentSpeed = 0.0f;
+        public int CurrentAnimation = 0;
 
         public void LateUpdate()
         {
-            Animator.SetFloat("Speed", CurrentSpeed);
+            Animator.SetFloat(PlayerController.AnimatorSpeedName, CurrentSpeed);
+            Animator.SetInteger(PlayerController.AnimatorCurrentAnimationName, CurrentAnimation);
         }
     }
 }

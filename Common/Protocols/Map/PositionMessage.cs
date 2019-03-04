@@ -17,6 +17,8 @@ namespace Common.Protocols.Map
 
         public float Rotation { get; set; }
 
+        public int CurrentAnimation { get; set; }
+
         public PositionMessage()
         {
 
@@ -37,6 +39,7 @@ namespace Common.Protocols.Map
             Z = reader.GetFloat();
             Rotation = reader.GetFloat();
             Speed = reader.GetFloat();
+            CurrentAnimation = reader.GetInt();
         }
 
         public void Write(UdpDataWriter writer)
@@ -48,6 +51,7 @@ namespace Common.Protocols.Map
             writer.Put(Z);
             writer.Put(Rotation);
             writer.Put(Speed);
+            writer.Put(CurrentAnimation);
         }
     }
 }

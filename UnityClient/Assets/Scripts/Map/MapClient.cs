@@ -50,7 +50,6 @@ namespace Assets.Scripts.Map
 
         private void SendPosition(PositionMessage msg)
         {
-            Debug.Log("XYZ: " + msg.X + "," + msg.Y + "," + msg.Z);
             var msgWriter = new UdpDataWriter();
             msg.Write(msgWriter);
             manager.SendToAll(msgWriter, ChannelType.UnreliableOrdered);
@@ -83,7 +82,9 @@ namespace Assets.Scripts.Map
                 var msg = playerPositions[name];
                 players[msg.Name].transform.rotation = Quaternion.Euler(0, msg.Rotation, 0);
                 players[msg.Name].transform.position = Vector3.Lerp(players[msg.Name].transform.position, new Vector3(msg.X, msg.Y, msg.Z), LerpSpeed);
-                players[msg.Name].GetComponent<RemotePlayerAnimation>().CurrentSpeed = Mathf.Lerp(players[msg.Name].GetComponent<RemotePlayerAnimation>().CurrentSpeed, msg.Speed, LerpSpeed);
+                var remoteAnimation = players[msg.Name].GetComponent<RemotePlayerAnimation>();
+                remoteAnimation.CurrentSpeed = Mathf.Lerp(players[msg.Name].GetComponent<RemotePlayerAnimation>().CurrentSpeed, msg.Speed, LerpSpeed);
+                remoteAnimation.CurrentAnimation = msg.CurrentAnimation;
             }
         }
 
@@ -98,7 +99,8 @@ namespace Assets.Scripts.Map
                     Y = PlayerController.transform.position.y,
                     Z = PlayerController.transform.position.z,
                     Speed = PlayerController.AnimationsSpeed,
-                    Rotation = PlayerController.transform.rotation.eulerAngles.y
+                    Rotation = PlayerController.transform.rotation.eulerAngles.y,
+                    CurrentAnimation = PlayerController.Animator.GetInteger(PlayerController.AnimatorCurrentAnimationName)
                 });
             }
         }

@@ -69,14 +69,22 @@ namespace Assets.Scripts
             Color textColor = Color.white;
             if (msg.FromOrTo == RestApi.CharacterName)
             {
-                textColor = Color.blue;
+                textColor = Color.gray;
+            }
+            else if (msg.Scope == ChatScope.System)
+            {
+                textColor = Color.red;
             }
 
             text.color = textColor;
 
-            if (msg.Scope == ChatScope.Whisper)
+            if (msg.Scope == ChatScope.Whisper || msg.Scope == ChatScope.Map)
             {
                 text.text = string.Format("{0}: {1}", msg.FromOrTo, msg.Message);
+            }
+            else
+            {
+                text.text = string.Format("[System] {0}", msg.Message);
             }
         }
     }

@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using ChatActorService.Interfaces;
 using Common;
+using Common.Protocols.Chat;
 using Common.Protocols.Map;
 using CommonServer.MapPartitioning;
 using Microsoft.ServiceFabric.Actors;
@@ -47,6 +49,20 @@ namespace MapActorService
         {
             PartitionPlayerMapping.Clear();
             return base.OnDeactivateAsync();
+        }
+
+        public async Task SendChatMessage(ChatMessage msg)
+        {
+            var playerNames = PlayerPositionMapping.Keys.ToList();
+            foreach (var name in playerNames)
+            {
+                ActorProxy.Create<IChatActor>(new ActorId(name)).WriteMessage(new ActorChatMessage()
+                {
+                    Message = msg.Message,
+                    Prefix = msg.FromOrTo,
+                    Scope = ChatScope.Map
+                });
+            }
         }
 
         public async Task UpdatePlayerPosition(PositionMessage message)

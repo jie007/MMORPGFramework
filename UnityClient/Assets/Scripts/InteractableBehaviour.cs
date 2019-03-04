@@ -22,6 +22,9 @@ namespace Assets.Scripts
 
         private Coroutine interactionRoutine = null;
 
+        public Action OnInteractionFinish;
+        public InteractionProgressbar Progressbar;
+
         public void SetInteractableState(bool isInteractable)
         {
             if(!isInteractable)
@@ -33,25 +36,34 @@ namespace Assets.Scripts
 
         public void Start()
         {
+            Progressbar = GameObject.FindObjectOfType<InteractionProgressbar>();
             navMeshAgent = GameObject.FindObjectOfType<NavMeshAgent>();
         }
 
-        public void OnInteract()
+        public bool OnInteract()
         {
             if (ActiveGo.activeSelf)
             {
                 Debug.Log("Send Start Message");
                 GameObject.FindObjectOfType<InteractableClient>().SendStartMessage(this.Konfiguration.Id);
                 interactionRoutine = this.StartCoroutine(Interacting());
+
+                Progressbar.Initialize(Konfiguration.TimeToInteract);
+               
+                return true;
             }
+
+            return false;
         }
 
         private IEnumerator Interacting()
         {
             yield return new WaitForSeconds((float) Konfiguration.TimeToInteract / 1000.0f);
-            Debug.Log("Send Start Finish");
+            Debug.Log("Send Finish Message");
             GameObject.FindObjectOfType<InteractableClient>().SendFinishMessage(this.Konfiguration.Id);
             interactionRoutine = null;
+            if (OnInteractionFinish != null)
+                OnInteractionFinish();
         }
 
         private void OnDrawGizmosSelected()
@@ -66,6 +78,8 @@ namespace Assets.Scripts
             {
                 this.StopCoroutine(interactionRoutine);
                 interactionRoutine = null;
+                OnInteractionFinish();
+                Progressbar.Hide();
             }
         }
     }

@@ -5,8 +5,10 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
+using ChatActorService.Interfaces;
 using Common;
 using Common.Interactables;
+using Common.Protocols.Chat;
 using Common.Protocols.Interactable;
 using Common.Protocols.Map;
 using Microsoft.ServiceFabric.Actors;
@@ -119,6 +121,13 @@ namespace InteractableActorService
 
             currentStatus.IsActive = false;
             RegisterStatusChange(currentStatus);
+
+            ActorProxy.Create<IChatActor>(new ActorId(name)).WriteMessage(new ActorChatMessage()
+            {
+                Message = "You finished with " + msg.Id,
+                Prefix = "System",
+                Scope = ChatScope.System
+            });
 
             return true;
 

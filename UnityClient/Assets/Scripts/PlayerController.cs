@@ -9,6 +9,8 @@ namespace Assets.Scripts
     {
         public Animator Animator;
         public NavMeshAgent Agent;
+        public static readonly string AnimatorSpeedName = "Speed";
+        public static readonly string AnimatorCurrentAnimationName = "CurrentAnimation";
 
         public float AnimationsSpeed = 0.0f;
 
@@ -28,10 +30,16 @@ namespace Assets.Scripts
                 if (currentDistance <= RunToInteractable.Konfiguration.MaximumDistance)
                 {
                     StopPathFollowing();
-                    RunToInteractable.OnInteract();
-                    CurrentInteractable = RunToInteractable;
-
-                    RunToInteractable = null;
+                    if (RunToInteractable.OnInteract())
+                    {
+                        CurrentInteractable = RunToInteractable;
+                        RunToInteractable = null;
+                        Animator.SetInteger(AnimatorCurrentAnimationName, 1);
+                        CurrentInteractable.OnInteractionFinish = () =>
+                        {
+                            Animator.SetInteger(AnimatorCurrentAnimationName, 0);
+                        };
+                    }
                 }
             }
         }
@@ -53,7 +61,6 @@ namespace Assets.Scripts
                 {
                     var go = hit.transform.gameObject;
 
-                    Debug.Log("Highlight: " + go.name);
                     if (Input.GetMouseButtonDown(0))
                     {
                         AbortInteraction();
@@ -79,6 +86,7 @@ namespace Assets.Scripts
             {
                 CurrentInteractable.OnAbortInteraction();
             }
+
             CurrentInteractable = null;
         }
 
@@ -113,7 +121,7 @@ namespace Assets.Scripts
                 AnimationsSpeed = 0;
             }
 
-            Animator.SetFloat("Speed", AnimationsSpeed);
+            Animator.SetFloat(AnimatorSpeedName, AnimationsSpeed);
         }
     }
 }
