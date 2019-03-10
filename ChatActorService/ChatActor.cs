@@ -13,7 +13,6 @@ namespace ChatActorService
     [StatePersistence(StatePersistence.Volatile)]
     public class ChatActor : Actor, IChatActor
     {
-        private const string StateNameIsOnline = "IsOnline";
         private const string StateNameMessages = "Messages";
 
         /// <summary>
@@ -28,35 +27,18 @@ namespace ChatActorService
 
         protected override async Task OnActivateAsync()
         {
-            await this.StateManager.TryAddStateAsync(StateNameIsOnline, false);
             await this.StateManager.TryAddStateAsync(StateNameMessages, new List<ActorChatMessage>());
             await base.OnActivateAsync();
         }
 
         protected override async Task OnDeactivateAsync()
         {
-            await SetOnlineState(false);
+            await this.StateManager.RemoveStateAsync(StateNameMessages);
             await base.OnDeactivateAsync();
-        }
-
-        public async Task SetOnlineState(bool isOnline)
-        {
-            await this.StateManager.SetStateAsync(StateNameIsOnline, isOnline);
-
-            if (!isOnline)
-            {
-                await ClearMessages();
-            }
-            await this.StateManager.SaveStateAsync();
         }
 
         public async Task WriteMessage(ActorChatMessage msg)
         {
-            if (!await this.StateManager.GetStateAsync<bool>(StateNameIsOnline))
-            {
-                return;
-            }
-
             var messages = await this.StateManager.GetStateAsync<List<ActorChatMessage>>(StateNameMessages);
             messages.Add(msg);
 

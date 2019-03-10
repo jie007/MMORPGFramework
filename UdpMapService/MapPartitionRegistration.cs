@@ -12,10 +12,12 @@ namespace UdpMapService
     public class MapPartitionRegistration
     {
         public List<MapPartition> Partitions { get; set; }
+        public string Map { get; set; }
 
-        public MapPartitionRegistration()
+        public MapPartitionRegistration(string map)
         {
             Partitions = new List<MapPartition>();
+            Map = map;
         }
 
         public void Update(PositionMessage msg)

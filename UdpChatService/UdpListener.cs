@@ -11,6 +11,7 @@ using Common.Protocols;
 using Common.Protocols.Chat;
 using CommonServer;
 using CommonServer.ServiceFabric;
+using CommonServer.UdpServiceHelper;
 using MapActorService.Interfaces;
 using Microsoft.ServiceFabric.Actors;
 using Microsoft.ServiceFabric.Actors.Client;
@@ -24,9 +25,7 @@ namespace UdpChatService
     public class UdpListener : IUdpListener
     {
         public UdpManager UdpManager { get; set; }
-
-        public ConcurrentDictionary<long, string> ConnectionIdToUserId = new ConcurrentDictionary<long, string>();
-        public ConcurrentDictionary<string, string> Map = new ConcurrentDictionary<string, string>();
+        public UdpConnectionManagment UdpConnectionManagment = new UdpConnectionManagment();
 
         public void Update()
         {
@@ -36,11 +35,11 @@ namespace UdpChatService
             foreach (UdpPeer peer in peers)
             {
                 var closurePeer = peer;
-                if (!this.ConnectionIdToUserId.ContainsKey(closurePeer.ConnectId))
+                var user = UdpConnectionManagment.GetUser(closurePeer.ConnectId);
+                if (user == null)
                     continue;
 
-                string id = this.ConnectionIdToUserId[closurePeer.ConnectId];
-                IChatActor chatActor = ActorProxy.Create<IChatActor>(new ActorId(id));
+                IChatActor chatActor = ActorProxy.Create<IChatActor>(new ActorId(user.Name));
                 chatActor.GetMessages().ContinueWith((taskMessages) =>
                 {
                     var msgs = taskMessages.Result;
@@ -71,18 +70,7 @@ namespace UdpChatService
 
         public void OnPeerDisconnected(UdpPeer peer, DisconnectInfo disconnectInfo)
         {
-            if (ConnectionIdToUserId.ContainsKey(peer.ConnectId))
-            {
-                var actor = ActorProxy.Create<IChatActor>(new ActorId(ConnectionIdToUserId[peer.ConnectId]));
-                actor.SetOnlineState(false);
-
-                string value = string.Empty;
-                string name = ConnectionIdToUserId[peer.ConnectId];
-                ConnectionIdToUserId.TryRemove(peer.ConnectId, out value);
-
-                string map = string.Empty;
-                Map.TryRemove(name, out map);
-            }
+            UdpConnectionManagment.RemoveUser(peer.ConnectId);
         }
 
         public void OnNetworkError(UdpEndPoint endPoint, int socketErrorCode)
@@ -93,12 +81,12 @@ namespace UdpChatService
         {
             try
             {
-                if (ConnectionIdToUserId.ContainsKey(peer.ConnectId))
+                var user = UdpConnectionManagment.GetUser(peer.ConnectId);
+                if (user != null)
                 {
                     var msg = new ChatMessage(reader);
-                    var from = ConnectionIdToUserId[peer.ConnectId];
                     string to = msg.FromOrTo;
-                    msg.FromOrTo = from;
+                    msg.FromOrTo = user.Name;
 
                     switch (msg.Scope)
                     {
@@ -106,36 +94,28 @@ namespace UdpChatService
                             var aMsg = new ActorChatMessage()
                             {
                                 Message = msg.Message,
-                                Prefix = from,
+                                Prefix = user.Name,
                                 Scope = msg.Scope
                             };
 
-                            ActorProxy.Create<IChatActor>(new ActorId(from)).WriteMessage(aMsg);
+                            ActorProxy.Create<IChatActor>(new ActorId(user.Name)).WriteMessage(aMsg);
                             ActorProxy.Create<IChatActor>(new ActorId(to)).WriteMessage(aMsg);
                             break;
                         case ChatScope.Map:
-                            ActorProxy.Create<IMapActorService>(new ActorId(Map[from])).SendChatMessage(msg).Wait();
+                            ActorProxy.Create<IMapActorService>(new ActorId(user.Map)).SendChatMessage(msg).Wait();
                             break;
                     }
                 }
                 else
                 {
                     var tokenMsg = new TokenMessage(reader);
-                    string token = tokenMsg.Token;
-                    string id = JwtTokenHelper.GetTokenClaim(token, "CharacterName");
-                    string map = JwtTokenHelper.GetTokenClaim(token, "Map");
-
-                    if (string.IsNullOrEmpty(id))
+                    user = UdpConnectionManagment.AddUser(peer.ConnectId, tokenMsg);
+                    if (user == null)
                     {
                         UdpManager.DisconnectPeer(peer);
                     }
                     else
                     {
-                        ConnectionIdToUserId.AddOrUpdate(peer.ConnectId, (connId) => { return id; }, (connId, oldVal) => { return id; });
-                        Map.AddOrUpdate(id, (connId) => { return map; }, (connId, oldVal) => { return map; });
-                        var actor = ActorProxy.Create<IChatActor>(new ActorId(id));
-                        actor.SetOnlineState(true);
-
                         UdpDataWriter writer = new UdpDataWriter();
                         tokenMsg.Write(writer);
                         peer.Send(writer, ChannelType.ReliableOrdered);

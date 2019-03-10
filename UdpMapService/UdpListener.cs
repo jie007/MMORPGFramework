@@ -13,6 +13,7 @@ using Common.Protocols.Map;
 using CommonServer;
 using CommonServer.MapPartitioning;
 using CommonServer.ServiceFabric;
+using CommonServer.UdpServiceHelper;
 using MapActorService.Interfaces;
 using Microsoft.ServiceFabric.Actors;
 using Microsoft.ServiceFabric.Actors.Client;
@@ -27,9 +28,9 @@ namespace UdpMapService
     {
         public UdpManager UdpManager { get; set; }
 
-        public ConcurrentDictionary<long, string> ConnectionIdToUserId = new ConcurrentDictionary<long, string>();
-        public ConcurrentDictionary<string, string> Map = new ConcurrentDictionary<string, string>();
         public ConcurrentDictionary<string, MapPartitionRegistration> PlayerRegistrations = new ConcurrentDictionary<string, MapPartitionRegistration>();
+        public UdpConnectionManagment UdpConnectionManagment = new UdpConnectionManagment();
+
 
         public void Update()
         {
@@ -40,11 +41,11 @@ namespace UdpMapService
 
             foreach (var registration in PlayerRegistrations)
             {
-                string map = Map[registration.Key];
+                string map = registration.Value.Map;
 
                 if (!mapPartitionRegistrations.ContainsKey(map))
                 {
-                    mapPartitionRegistrations.Add(map, new MapPartitionRegistration());
+                    mapPartitionRegistrations.Add(map, new MapPartitionRegistration(map));
                 }
 
                 mapPartitionRegistrations[map].Merge(registration.Value);
@@ -60,14 +61,16 @@ namespace UdpMapService
             foreach (UdpPeer peer in peers)
             {
                 var closurePeer = peer;
-                if (!this.ConnectionIdToUserId.ContainsKey(closurePeer.ConnectId))
+
+                var user = UdpConnectionManagment.GetUser(closurePeer.ConnectId);
+                if(user == null)
                     continue;
 
-                string name = ConnectionIdToUserId[closurePeer.ConnectId];
+                string name = user.Name;
                 var registration = PlayerRegistrations[name];
 
                 UdpDataWriter writer = new UdpDataWriter();
-                foreach (var position in mapData[Map[name]])
+                foreach (var position in mapData[user.Map])
                 {
                     var pPartition = new MapPartition(position);
 
@@ -87,23 +90,13 @@ namespace UdpMapService
 
         public void OnPeerDisconnected(UdpPeer peer, DisconnectInfo disconnectInfo)
         {
-            if (ConnectionIdToUserId.ContainsKey(peer.ConnectId))
-            {
-                string value = string.Empty;
-                string name = ConnectionIdToUserId[peer.ConnectId];
-                ConnectionIdToUserId.TryRemove(peer.ConnectId, out value);
+            var user = UdpConnectionManagment.RemoveUser(peer.ConnectId);
+            if (user == null)
+                return;
 
-                string map = string.Empty;
-                Map.TryRemove(name, out map);
-
-                if (!string.IsNullOrEmpty(map))
-                {
-                    ActorProxy.Create<IMapActorService>(new ActorId(map)).RemovePlayer(name);
-                }
-
-                MapPartitionRegistration removedPartitions = new MapPartitionRegistration();
-                PlayerRegistrations.TryRemove(name, out removedPartitions);
-            }
+            ActorProxy.Create<IMapActorService>(new ActorId(user.Map)).RemovePlayer(user.Name);
+            MapPartitionRegistration removedPartitions = new MapPartitionRegistration(user.Map);
+            PlayerRegistrations.TryRemove(user.Name, out removedPartitions);
         }
 
         public void OnNetworkError(UdpEndPoint endPoint, int socketErrorCode)
@@ -114,39 +107,30 @@ namespace UdpMapService
         {
             try
             {
-                if (ConnectionIdToUserId.ContainsKey(peer.ConnectId))
+                UdpUser user = UdpConnectionManagment.GetUser(peer.ConnectId);
+                if (user != null)
                 {
                     var msg = new PositionMessage(reader);
-
-                    string name = ConnectionIdToUserId[peer.ConnectId];
-                    msg.Name = name;
-
+                    msg.Name = user.Name;
                     PlayerRegistrations[msg.Name].Update(msg);
-
-                    string map = Map[msg.Name];
-                    ActorProxy.Create<IMapActorService>(new ActorId(map)).UpdatePlayerPosition(msg);
+                    ActorProxy.Create<IMapActorService>(new ActorId(user.Map)).UpdatePlayerPosition(msg);
                 }
                 else
                 {
                     var tokenMsg = new TokenMessage(reader);
-                    string token = tokenMsg.Token;
-                    string id = JwtTokenHelper.GetTokenClaim(token, "CharacterName");
-                    string map = JwtTokenHelper.GetTokenClaim(token, "Map");
 
-                    if (string.IsNullOrEmpty(id))
+                    user = UdpConnectionManagment.AddUser(peer.ConnectId, tokenMsg);
+                    if (user != null)
                     {
-                        UdpManager.DisconnectPeer(peer);
-                    }
-                    else
-                    {
-                        ConnectionIdToUserId.AddOrUpdate(peer.ConnectId, (connId) => { return id; }, (connId, oldVal) => { return id; });
-
-                        Map.AddOrUpdate(id, (connId) => { return map; }, (connId, oldVal) => { return map; });
-                        PlayerRegistrations.AddOrUpdate(id, (connId) => { return new MapPartitionRegistration(); }, (connId, oldVal) => { return new MapPartitionRegistration(); });
+                        PlayerRegistrations[user.Name] = new MapPartitionRegistration(user.Map);
 
                         UdpDataWriter writer = new UdpDataWriter();
                         tokenMsg.Write(writer);
                         peer.Send(writer, ChannelType.ReliableOrdered);
+                    }
+                    else
+                    {
+                        UdpManager.DisconnectPeer(peer);
                     }
                 }
             }

@@ -8,6 +8,7 @@ using Common.Protocols.Map;
 using CommonServer;
 using CommonServer.MapPartitioning;
 using CommonServer.ServiceFabric;
+using CommonServer.UdpServiceHelper;
 using InteractableActorService.Interfaces;
 using Microsoft.ServiceFabric.Actors;
 using Microsoft.ServiceFabric.Actors.Client;
@@ -21,10 +22,8 @@ namespace UdpInteractableService
     {
         public UdpManager UdpManager { get; set; }
 
-        public ConcurrentDictionary<long, string> ConnectionIdToUserId = new ConcurrentDictionary<long, string>();
-        public ConcurrentDictionary<string, string> Map = new ConcurrentDictionary<string, string>();
+        public UdpConnectionManagment UdpConnectionManagment = new UdpConnectionManagment();
         public ConcurrentDictionary<long, DateTime> UpdatesReceived = new ConcurrentDictionary<long, DateTime>();
-
 
         public void Update()
         {
@@ -34,23 +33,21 @@ namespace UdpInteractableService
             foreach (UdpPeer peer in peers)
             {
                 var closurePeer = peer;
-                if (!this.ConnectionIdToUserId.ContainsKey(closurePeer.ConnectId))
+                var user = UdpConnectionManagment.GetUser(closurePeer.ConnectId);
+                if (user == null)
                     continue;
-
-                string name = ConnectionIdToUserId[closurePeer.ConnectId];
-                string map = Map[name];
 
                 // TODO: Batch calls to same map
                 if (UpdatesReceived.ContainsKey(closurePeer.ConnectId))
                 {
-                    ActorProxy.Create<IInteractableActorService>(new ActorId(map))
+                    ActorProxy.Create<IInteractableActorService>(new ActorId(user.Map))
                         .GetUpdateStatus(UpdatesReceived[closurePeer.ConnectId])
                         .ContinueWith(x => SendStatus(x.Result, closurePeer));
                     UpdatesReceived[closurePeer.ConnectId] = DateTime.UtcNow;
                 }
                 else
                 {
-                    ActorProxy.Create<IInteractableActorService>(new ActorId(map))
+                    ActorProxy.Create<IInteractableActorService>(new ActorId(user.Map))
                         .GetAllStatus()
                         .ContinueWith(x => SendStatus(x.Result, closurePeer));
                     UpdatesReceived.AddOrUpdate(closurePeer.ConnectId, DateTime.UtcNow, (l, time) => DateTime.UtcNow);
@@ -78,15 +75,12 @@ namespace UdpInteractableService
 
         public void OnPeerDisconnected(UdpPeer peer, DisconnectInfo disconnectInfo)
         {
-            if (ConnectionIdToUserId.ContainsKey(peer.ConnectId))
-            {
-                string value = string.Empty;
-                string name = ConnectionIdToUserId[peer.ConnectId];
-                ConnectionIdToUserId.TryRemove(peer.ConnectId, out value);
+            var user = this.UdpConnectionManagment.RemoveUser(peer.ConnectId);
+            if (user == null)
+                return;
 
-                string map = string.Empty;
-                Map.TryRemove(name, out map);
-            }
+            DateTime removed;
+            UpdatesReceived.TryRemove(peer.ConnectId, out removed);
         }
 
         public void OnNetworkError(UdpEndPoint endPoint, int socketErrorCode)
@@ -97,44 +91,36 @@ namespace UdpInteractableService
         {
             try
             {
-                if (ConnectionIdToUserId.ContainsKey(peer.ConnectId))
+                var user = UdpConnectionManagment.GetUser(peer.ConnectId);
+                if (user != null)
                 {
-                    string name = ConnectionIdToUserId[peer.ConnectId];
-                    string map = Map[name];
                     switch (reader.PeekByte())
                     {
                         case (byte)MessageTypes.InteractableStart:
                             var msgStart = new StartInteractMessage(reader);
                             msgStart.ServerTimeStamp = DateTime.UtcNow.Ticks;
-                            ActorProxy.Create<IInteractableActorService>(new ActorId(map)).StartInteraction(name, msgStart);
+                            ActorProxy.Create<IInteractableActorService>(new ActorId(user.Map)).StartInteraction(user.Name, msgStart);
                             break;
                         case (byte)MessageTypes.InteractableFinish:
                             var msgFinish = new FinishInteractMessage(reader);
                             msgFinish.ServerTimeStamp = DateTime.UtcNow.Ticks;
-                            ActorProxy.Create<IInteractableActorService>(new ActorId(map)).FinishInteraction(name, msgFinish);
+                            ActorProxy.Create<IInteractableActorService>(new ActorId(user.Map)).FinishInteraction(user.Name, msgFinish);
                             break;
                     }
                 }
                 else
                 {
                     var tokenMsg = new TokenMessage(reader);
-                    string token = tokenMsg.Token;
-                    string id = JwtTokenHelper.GetTokenClaim(token, "CharacterName");
-                    string map = JwtTokenHelper.GetTokenClaim(token, "Map");
-
-                    if (string.IsNullOrEmpty(id))
+                    user = UdpConnectionManagment.AddUser(peer.ConnectId, tokenMsg);
+                    if (user != null)
                     {
-                        UdpManager.DisconnectPeer(peer);
-                    }
-                    else
-                    {
-                        ConnectionIdToUserId.AddOrUpdate(peer.ConnectId, (connId) => { return id; }, (connId, oldVal) => { return id; });
-
-                        Map.AddOrUpdate(id, (connId) => { return map; }, (connId, oldVal) => { return map; });
-
                         UdpDataWriter writer = new UdpDataWriter();
                         tokenMsg.Write(writer);
                         peer.Send(writer, ChannelType.ReliableOrdered);
+                    }
+                    else
+                    {
+                        UdpManager.DisconnectPeer(peer);
                     }
                 }
             }
